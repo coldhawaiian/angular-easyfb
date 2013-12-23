@@ -42,8 +42,10 @@ angular.module('ezfb', [])
     'Canvas.stopTimer': 0
   };
 
+  // Default locale
   var _locale = 'en_US';
 
+  // Default init parameters
   var _initParams = {
     // appId      : '', // App ID from the App Dashboard
     // channelUrl : '', // Channel File for x-domain communication
@@ -51,6 +53,12 @@ angular.module('ezfb', [])
     cookie     : true, // set sessions cookies to allow your server to access the session?
     xfbml      : true  // parse XFBML tags on this page?
   };
+  
+  // Default init function
+  var _initFunction = ['$window', '$fbInitParams', function ($window, $fbInitParams) {
+    // Initialize the FB JS SDK
+    $window.FB.init($fbInitParams);
+  }];
 
   /**
    * Generate namespace route in an object
@@ -116,13 +124,25 @@ angular.module('ezfb', [])
     getLocale: function() {
       return _locale;
     },
+    
+    setInitFunction: function (func) {
+      if (angular.isArray(func) || angular.isFunction(func)) {
+        _initFunction = func;
+      }
+      else {
+        throw new Error('Init function type error.');
+      }
+    },
+    getInitFunction: function () {
+      return _initFunction;
+    },
 
     //////////
     // $get //
     //////////
     $get: [
-             '$window', '$q', '$document', '$parse', '$rootScope',
-    function ($window,   $q,   $document,   $parse,   $rootScope) {
+             '$window', '$q', '$document', '$parse', '$rootScope', '$injector',
+    function ($window,   $q,   $document,   $parse,   $rootScope,   $injector) {
       var _initReady, _$FB;
 
       if (!_initParams.appId) {
@@ -147,8 +167,8 @@ angular.module('ezfb', [])
       }($document[0]));
 
       $window.fbAsyncInit = function () {
-        // Initialize the FB JS SDK
-        $window.FB.init(_initParams);
+        // Run init function
+        $injector.invoke(_initFunction, null, {'$fbInitParams': _initParams});
 
         _$FB.$$ready = true;
         $rootScope.$apply(function () {
