@@ -55,10 +55,11 @@ angular.module('ezfb', [])
   };
   
   // Default init function
-  var _initFunction = ['$window', '$fbInitParams', function ($window, $fbInitParams) {
+  var _defaultInitFunction = ['$window', '$fbInitParams', function ($window, $fbInitParams) {
     // Initialize the FB JS SDK
     $window.FB.init($fbInitParams);
   }];
+  var _initFunction = _defaultInitFunction;
 
   /**
    * Generate namespace route in an object
@@ -144,9 +145,10 @@ angular.module('ezfb', [])
              '$window', '$q', '$document', '$parse', '$rootScope', '$injector',
     function ($window,   $q,   $document,   $parse,   $rootScope,   $injector) {
       var _initReady, _$FB;
+      var _paramsReady = $q.defer();
 
-      if (!_initParams.appId) {
-        throw new Error('appId required.');
+      if (_initParams.appId || _initFunction !== _defaultInitFunction) {
+        _paramsReady.resolve();
       }
 
       /**
@@ -167,17 +169,21 @@ angular.module('ezfb', [])
       }($document[0]));
 
       $window.fbAsyncInit = function () {
-        // Run init function
-        $injector.invoke(_initFunction, null, {'$fbInitParams': _initParams});
+        _paramsReady.promise.then(function() {
+          // Run init function
+          $injector.invoke(_initFunction, null, {'$fbInitParams': _initParams});
 
-        _$FB.$$ready = true;
-        $rootScope.$apply(function () {
+          _$FB.$$ready = true;
           _initReady.resolve();
         });
       };
 
       _$FB = {
-        $$ready: false
+        $$ready: false,
+        init: function (params) {
+          _config(_initParams, params);
+          _paramsReady.resolve();
+        }
       };
 
       /**
